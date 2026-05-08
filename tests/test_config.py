@@ -11,7 +11,7 @@ def test_outline_config_defaults_to_overlay_layer() -> None:
 
 
 def test_blur_config_defaults_to_overlay_layer() -> None:
-    config = BlurConfig(namespace="test")
+    config = BlurConfig(color="#00000040", namespace="test")
 
     assert config.layer is Layer.OVERLAY
 
@@ -46,4 +46,9 @@ def test_outline_config_rejects_empty_namespace() -> None:
 
 def test_blur_config_rejects_empty_namespace() -> None:
     with pytest.raises(ValidationError):
-        BlurConfig(namespace="")
+        BlurConfig(color="#00000040", namespace="")
+
+
+def test_blur_config_rejects_empty_color() -> None:
+    with pytest.raises(ValidationError):
+        BlurConfig(color="", namespace="test")

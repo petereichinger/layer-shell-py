@@ -33,10 +33,11 @@ def test_outline_rejects_unknown_layer_without_starting_gtk() -> None:
     assert "dock" in result.output
 
 
-def test_blur_help_lists_namespace_option() -> None:
+def test_blur_help_lists_color_and_namespace_options() -> None:
     result = CliRunner().invoke(app, ["blur", "--help"], terminal_width=120)
 
     assert result.exit_code == 0
+    assert "color" in result.stdout
     assert "namespace" in result.stdout
 
 

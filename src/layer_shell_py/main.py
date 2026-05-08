@@ -63,6 +63,10 @@ def outline(
 
 @app.command()
 def blur(
+    color: Annotated[
+        str,
+        typer.Option(help="GTK/CSS color for the blur layer tint."),
+    ] = "#00000040",
     ignore_exclusive_zones: Annotated[
         bool,
         typer.Option(
@@ -85,6 +89,7 @@ def blur(
 ) -> None:
     try:
         config = BlurConfig(
+            color=color,
             ignore_exclusive_zones=ignore_exclusive_zones,
             layer=layer,
             namespace=namespace,

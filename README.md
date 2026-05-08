@@ -41,6 +41,13 @@ Create a fullscreen blur target for niri 26.04 or newer:
 layer-shell-py blur
 ```
 
+The blur command draws a translucent fullscreen tint so niri has a visible
+surface to composite the background effect through. Adjust it with `--color`:
+
+```sh
+layer-shell-py blur --color '#00000030'
+```
+
 Then match its namespace in your niri config:
 
 ```kdl
@@ -49,6 +56,7 @@ layer-rule {
 
     background-effect {
         blur true
+        xray false
     }
 }
 ```

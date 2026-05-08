@@ -29,4 +29,4 @@ class OutlineConfig(LayerSurfaceConfig):
 
 
 class BlurConfig(LayerSurfaceConfig):
-    pass
+    color: str = Field(min_length=1)

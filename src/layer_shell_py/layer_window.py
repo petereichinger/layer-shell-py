@@ -83,11 +83,17 @@ def _add_outline_child(
 def _add_blur_child(
     window: Any,
     gtk: Any,
-    _gdk: Any,
-    _config: LayerSurfaceConfig,
+    gdk: Any,
+    config: LayerSurfaceConfig,
 ) -> None:
+    if not isinstance(config, BlurConfig):
+        msg = "Blur window requires blur configuration."
+        raise RuntimeDependencyError(msg)
+
+    color = _parse_color(config.color, gdk)
     drawing_area = gtk.DrawingArea()
     _disable_focus(drawing_area)
+    drawing_area.set_draw_func(_draw_fill(color))
     window.set_child(drawing_area)
 
 
@@ -193,5 +199,14 @@ def _draw_outline(color: Any, thickness: int) -> Callable[[Any, Any, int, int], 
             max(0, height - thickness),
         )
         context.stroke()
+
+    return draw
+
+
+def _draw_fill(color: Any) -> Callable[[Any, Any, int, int], None]:
+    def draw(_area: Any, context: Any, width: int, height: int) -> None:
+        context.set_source_rgba(color.red, color.green, color.blue, color.alpha)
+        context.rectangle(0, 0, width, height)
+        context.fill()
 
     return draw
