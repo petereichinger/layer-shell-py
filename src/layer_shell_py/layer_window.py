@@ -1,8 +1,8 @@
+import sys
 from collections.abc import Callable
 from ctypes.util import find_library
 from importlib import import_module
 from os import environ, execvpe
-from sys import argv, executable
 from typing import Any, cast
 
 from .config import BlurConfig, Layer, LayerSurfaceConfig, OutlineConfig
@@ -76,6 +76,8 @@ def _add_outline_child(
     color = _parse_color(config.color, gdk)
     drawing_area = gtk.DrawingArea()
     _disable_focus(drawing_area)
+    drawing_area.set_content_width(config.thickness * 2)
+    drawing_area.set_content_height(config.thickness * 2)
     drawing_area.set_draw_func(_draw_outline(color, config.thickness))
     window.set_child(drawing_area)
 
@@ -113,11 +115,19 @@ def _ensure_layer_shell_preloaded() -> None:
 
     env = environ.copy()
     env["LD_PRELOAD"] = ":".join([library, *[item for item in preloads if item]])
-    execvpe(executable, [executable, *argv], env)
+    execvpe(sys.executable, _preload_reexec_argv(), env)
+
+
+def _preload_reexec_argv() -> list[str]:
+    if getattr(sys, "frozen", False):
+        return [sys.executable, *sys.argv[1:]]
+
+    return [sys.executable, *sys.argv]
 
 
 def _load_gtk_modules() -> tuple[Any, Any, Any]:
     try:
+        import_module("cairo")
         gi = import_module("gi")
         gi.require_version("Gtk", "4.0")
         gi.require_version("Gdk", "4.0")
@@ -129,8 +139,9 @@ def _load_gtk_modules() -> tuple[Any, Any, Any]:
         )
     except (ImportError, ValueError, AttributeError) as exc:
         msg = (
-            "GTK 4, PyGObject, and Gtk4LayerShell are required. "
-            "On Arch, install: sudo pacman -S gtk4 python-gobject gtk4-layer-shell"
+            "GTK 4, PyGObject, Pycairo, and Gtk4LayerShell are required. "
+            "On Arch, install: sudo pacman -S gtk4 python-gobject "
+            "python-cairo gtk4-layer-shell"
         )
         raise RuntimeDependencyError(msg) from exc
 
@@ -188,17 +199,12 @@ def _parse_color(color: str, gdk: Any) -> Any:
 
 def _draw_outline(color: Any, thickness: int) -> Callable[[Any, Any, int, int], None]:
     def draw(_area: Any, context: Any, width: int, height: int) -> None:
-        half = thickness / 2
-
         context.set_source_rgba(color.red, color.green, color.blue, color.alpha)
-        context.set_line_width(thickness)
-        context.rectangle(
-            half,
-            half,
-            max(0, width - thickness),
-            max(0, height - thickness),
-        )
-        context.stroke()
+        context.rectangle(0, 0, width, thickness)
+        context.rectangle(0, max(0, height - thickness), width, thickness)
+        context.rectangle(0, 0, thickness, height)
+        context.rectangle(max(0, width - thickness), 0, thickness, height)
+        context.fill()
 
     return draw
 

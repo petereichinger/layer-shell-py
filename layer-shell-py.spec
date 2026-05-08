@@ -18,6 +18,7 @@ a = Analysis(
     binaries=[],
     datas=gtk4_layer_shell_typelibs,
     hiddenimports=[
+        "cairo",
         "gi",
         "gi.repository.Gdk",
         "gi.repository.Gtk",

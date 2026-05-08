@@ -30,6 +30,10 @@ class Instance:
     def pid_path(self) -> Path:
         return _runtime_dir() / f"{self.effect}-{self.instance_id}.pid"
 
+    @property
+    def log_path(self) -> Path:
+        return _runtime_dir() / f"{self.effect}-{self.instance_id}.log"
+
 
 def validate_instance_id(instance_id: str) -> str:
     if fullmatch(r"[A-Za-z0-9_.-]+", instance_id) is None:
@@ -70,13 +74,15 @@ def start_instance(instance: Instance, child_args: list[str]) -> int:
         return 0
 
     instance.pid_path.parent.mkdir(parents=True, exist_ok=True)
+    log_file = instance.log_path.open("ab")
     process = Popen(
         [argv[0], *child_args],
         stdin=DEVNULL,
         stdout=DEVNULL,
-        stderr=DEVNULL,
+        stderr=log_file,
         start_new_session=True,
     )
+    log_file.close()
     instance.pid_path.write_text(f"{process.pid}\n", encoding="utf-8")
     return 0
 

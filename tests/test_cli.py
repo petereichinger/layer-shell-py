@@ -1,7 +1,9 @@
 import pytest
 from typer.testing import CliRunner
 
+from layer_shell_py import layer_window
 from layer_shell_py import main as main_module
+from layer_shell_py.config import OutlineConfig
 from layer_shell_py.instance import InstanceAction
 from layer_shell_py.main import app
 
@@ -164,5 +166,97 @@ def test_outline_toggle_routes_visual_options_to_lifecycle(
                 "screen-border",
                 "--respect-exclusive-zones",
             ],
+        )
+    ]
+
+
+def test_preload_reexec_preserves_console_script_args(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class ExecCalledError(Exception):
+        pass
+
+    calls: list[tuple[str, list[str], str | None]] = []
+
+    def fake_find_library(name: str) -> str:
+        assert name == "gtk4-layer-shell"
+        return "libgtk4-layer-shell.so"
+
+    def fake_execvpe(file: str, args: list[str], env: dict[str, str]) -> None:
+        calls.append((file, args, env.get("LD_PRELOAD")))
+        raise ExecCalledError
+
+    monkeypatch.setattr(layer_window.sys, "executable", "/usr/bin/python")
+    monkeypatch.setattr(
+        layer_window.sys,
+        "argv",
+        ["/venv/bin/layer-shell-py", "outline"],
+    )
+    monkeypatch.delattr(layer_window.sys, "frozen", raising=False)
+    monkeypatch.delenv("LD_PRELOAD", raising=False)
+    monkeypatch.setattr(layer_window, "find_library", fake_find_library)
+    monkeypatch.setattr(layer_window, "execvpe", fake_execvpe)
+
+    with pytest.raises(ExecCalledError):
+        layer_window.run_outline(
+            OutlineConfig(
+                color="#ff0000",
+                thickness=4,
+                namespace="layer-shell-py",
+                allow_non_wayland=True,
+            )
+        )
+
+    assert calls == [
+        (
+            "/usr/bin/python",
+            ["/usr/bin/python", "/venv/bin/layer-shell-py", "outline"],
+            "libgtk4-layer-shell.so",
+        )
+    ]
+
+
+def test_preload_reexec_does_not_duplicate_frozen_executable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class ExecCalledError(Exception):
+        pass
+
+    calls: list[tuple[str, list[str], str | None]] = []
+
+    def fake_find_library(name: str) -> str:
+        assert name == "gtk4-layer-shell"
+        return "libgtk4-layer-shell.so"
+
+    def fake_execvpe(file: str, args: list[str], env: dict[str, str]) -> None:
+        calls.append((file, args, env.get("LD_PRELOAD")))
+        raise ExecCalledError
+
+    monkeypatch.setattr(layer_window.sys, "executable", "/opt/bin/layer-shell-py")
+    monkeypatch.setattr(
+        layer_window.sys,
+        "argv",
+        ["/opt/bin/layer-shell-py", "outline"],
+    )
+    monkeypatch.setattr(layer_window.sys, "frozen", True, raising=False)
+    monkeypatch.delenv("LD_PRELOAD", raising=False)
+    monkeypatch.setattr(layer_window, "find_library", fake_find_library)
+    monkeypatch.setattr(layer_window, "execvpe", fake_execvpe)
+
+    with pytest.raises(ExecCalledError):
+        layer_window.run_outline(
+            OutlineConfig(
+                color="#ff0000",
+                thickness=4,
+                namespace="layer-shell-py",
+                allow_non_wayland=True,
+            )
+        )
+
+    assert calls == [
+        (
+            "/opt/bin/layer-shell-py",
+            ["/opt/bin/layer-shell-py", "outline"],
+            "libgtk4-layer-shell.so",
         )
     ]
