@@ -25,6 +25,9 @@ dev = [
 requires = ["uv_build>=0.11.0,<0.12.0"]
 build-backend = "uv_build"
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.ruff]
 line-length = 88
 target-version = "py314"
