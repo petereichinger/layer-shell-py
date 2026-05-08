@@ -67,8 +67,22 @@ Both commands accept `--namespace` for compositor-specific matching:
 layer-shell-py blur --namespace lockscreen-blur
 ```
 
-The layer does not request mouse or keyboard input. Stop it with `Ctrl+C`, a
-process manager, or `kill`.
+The layer does not request mouse or keyboard input. In foreground mode, stop it
+with `Ctrl+C`, a process manager, or `kill`.
+
+For compositor commands and scripts, manage a named instance with `--id` plus
+`--start`, `--stop`, or `--toggle`:
+
+```sh
+layer-shell-py blur --id fuzzel --toggle --namespace layer-shell-py-blur
+layer-shell-py blur --id fuzzel --stop
+
+layer-shell-py outline --id screenshare --start --color '#ff0000' --thickness 4
+layer-shell-py outline --id screenshare --stop
+```
+
+Managed instances store PID files under `$XDG_RUNTIME_DIR/layer-shell-py/`, or
+`/tmp/layer-shell-py-$UID/` when `$XDG_RUNTIME_DIR` is unavailable.
 
 ## Development
 
