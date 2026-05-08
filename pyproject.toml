@@ -6,7 +6,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.11.0",
+    "typer>=0.25.1",
 ]
+
+[project.scripts]
+layer-shell-py = "layer_shell_py.main:main"
 
 [dependency-groups]
 dev = [

@@ -1,0 +1,24 @@
+from typer.testing import CliRunner
+
+from layer_shell_py.main import app
+
+
+def test_help_lists_outline_command() -> None:
+    result = CliRunner().invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "outline" in result.stdout
+
+
+def test_outline_rejects_invalid_thickness_without_starting_gtk() -> None:
+    result = CliRunner().invoke(app, ["outline", "--thickness", "0"])
+
+    assert result.exit_code != 0
+    assert "greater than 0" in result.output
+
+
+def test_outline_rejects_unknown_layer_without_starting_gtk() -> None:
+    result = CliRunner().invoke(app, ["outline", "--layer", "dock"])
+
+    assert result.exit_code != 0
+    assert "dock" in result.output
