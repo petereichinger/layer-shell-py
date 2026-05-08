@@ -1,6 +1,8 @@
 from collections.abc import Callable
+from ctypes.util import find_library
 from importlib import import_module
-from os import environ
+from os import environ, execvpe
+from sys import argv, executable
 from typing import Any, cast
 
 from .config import Layer, OutlineConfig
@@ -14,6 +16,8 @@ def run_outline(config: OutlineConfig) -> int:
     if not config.allow_non_wayland and not _is_wayland_session():
         msg = "layer-shell-py must run under Wayland."
         raise RuntimeDependencyError(msg)
+
+    _ensure_layer_shell_preloaded()
 
     gtk, gdk, layer_shell = _load_gtk_modules()
     color = _parse_color(config.color, gdk)
@@ -56,14 +60,32 @@ def _is_wayland_session() -> bool:
     return environ.get("XDG_SESSION_TYPE") == "wayland" or "WAYLAND_DISPLAY" in environ
 
 
+def _ensure_layer_shell_preloaded() -> None:
+    library = find_library("gtk4-layer-shell")
+    if library is None:
+        msg = "Could not locate libgtk4-layer-shell for LD_PRELOAD."
+        raise RuntimeDependencyError(msg)
+
+    preloads = environ.get("LD_PRELOAD", "").split(":")
+    if library in preloads:
+        return
+
+    env = environ.copy()
+    env["LD_PRELOAD"] = ":".join([library, *[item for item in preloads if item]])
+    execvpe(executable, [executable, *argv], env)
+
+
 def _load_gtk_modules() -> tuple[Any, Any, Any]:
     try:
         gi = import_module("gi")
         gi.require_version("Gtk", "4.0")
         gi.require_version("Gdk", "4.0")
         gi.require_version("Gtk4LayerShell", "1.0")
-        repository = import_module("gi.repository")
-        return repository.Gtk, repository.Gdk, repository.Gtk4LayerShell
+        return (
+            import_module("gi.repository.Gtk"),
+            import_module("gi.repository.Gdk"),
+            import_module("gi.repository.Gtk4LayerShell"),
+        )
     except (ImportError, ValueError, AttributeError) as exc:
         msg = (
             "GTK 4, PyGObject, and Gtk4LayerShell are required. "
