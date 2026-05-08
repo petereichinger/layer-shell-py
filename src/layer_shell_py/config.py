@@ -10,11 +10,23 @@ class Layer(StrEnum):
     OVERLAY = "overlay"
 
 
-class OutlineConfig(BaseModel):
+class LayerSurfaceConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    color: str = Field(min_length=1)
-    thickness: int = Field(gt=0)
+    ignore_exclusive_zones: bool = True
     layer: Layer = Layer.OVERLAY
     namespace: str = Field(min_length=1)
     allow_non_wayland: bool = False
+
+    @property
+    def exclusive_zone(self) -> int:
+        return -1 if self.ignore_exclusive_zones else 0
+
+
+class OutlineConfig(LayerSurfaceConfig):
+    color: str = Field(min_length=1)
+    thickness: int = Field(gt=0)
+
+
+class BlurConfig(LayerSurfaceConfig):
+    pass

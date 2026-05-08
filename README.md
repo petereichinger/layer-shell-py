@@ -1,9 +1,10 @@
 # layer-shell-py
 
-Wayland layer shell utility for showing overlays such as colored outlines.
+Wayland layer shell utility for showing overlays such as colored outlines and
+fullscreen blur targets.
 
-The initial implementation provides a fullscreen, input-passive outline layer for
-Wayland compositors that support layer-shell.
+The tool provides fullscreen, input-passive layer-shell surfaces for Wayland
+compositors that support layer-shell.
 
 ## Requirements
 
@@ -32,6 +33,30 @@ Customize the color and thickness:
 
 ```sh
 layer-shell-py outline --color '#ff00ff' --thickness 6
+```
+
+Create a fullscreen blur target for niri 26.04 or newer:
+
+```sh
+layer-shell-py blur
+```
+
+Then match its namespace in your niri config:
+
+```kdl
+layer-rule {
+    match namespace="^layer-shell-py-blur$"
+
+    background-effect {
+        blur true
+    }
+}
+```
+
+Both commands accept `--namespace` for compositor-specific matching:
+
+```sh
+layer-shell-py blur --namespace lockscreen-blur
 ```
 
 The layer does not request mouse or keyboard input. Stop it with `Ctrl+C`, a

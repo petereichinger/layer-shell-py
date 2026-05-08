@@ -5,7 +5,7 @@ from os import environ, execvpe
 from sys import argv, executable
 from typing import Any, cast
 
-from .config import Layer, OutlineConfig
+from .config import BlurConfig, Layer, LayerSurfaceConfig, OutlineConfig
 
 
 class RuntimeDependencyError(RuntimeError):
@@ -13,6 +13,17 @@ class RuntimeDependencyError(RuntimeError):
 
 
 def run_outline(config: OutlineConfig) -> int:
+    return _run_layer_surface(config, _add_outline_child)
+
+
+def run_blur(config: BlurConfig) -> int:
+    return _run_layer_surface(config, _add_blur_child)
+
+
+def _run_layer_surface(
+    config: LayerSurfaceConfig,
+    add_child: Callable[[Any, Any, Any, LayerSurfaceConfig], None],
+) -> int:
     if not config.allow_non_wayland and not _is_wayland_session():
         msg = "layer-shell-py must run under Wayland."
         raise RuntimeDependencyError(msg)
@@ -20,7 +31,6 @@ def run_outline(config: OutlineConfig) -> int:
     _ensure_layer_shell_preloaded()
 
     gtk, gdk, layer_shell = _load_gtk_modules()
-    color = _parse_color(config.color, gdk)
 
     application = gtk.Application(application_id="dev.peter.LayerShellPy")
 
@@ -35,7 +45,7 @@ def run_outline(config: OutlineConfig) -> int:
         layer_shell.set_namespace(window, config.namespace)
         layer_shell.set_layer(window, _gtk_layer(config.layer, layer_shell))
         layer_shell.set_keyboard_mode(window, layer_shell.KeyboardMode.NONE)
-        layer_shell.set_exclusive_zone(window, 0)
+        layer_shell.set_exclusive_zone(window, config.exclusive_zone)
 
         for edge in (
             layer_shell.Edge.TOP,
@@ -45,15 +55,40 @@ def run_outline(config: OutlineConfig) -> int:
         ):
             layer_shell.set_anchor(window, edge, True)
 
-        drawing_area = gtk.DrawingArea()
-        _disable_focus(drawing_area)
-        drawing_area.set_draw_func(_draw_outline(color, config.thickness))
-        window.set_child(drawing_area)
+        add_child(window, gtk, gdk, config)
         window.connect("realize", _make_click_through)
         window.present()
 
     application.connect("activate", activate)
     return cast(int, application.run([]))
+
+
+def _add_outline_child(
+    window: Any,
+    gtk: Any,
+    gdk: Any,
+    config: LayerSurfaceConfig,
+) -> None:
+    if not isinstance(config, OutlineConfig):
+        msg = "Outline window requires outline configuration."
+        raise RuntimeDependencyError(msg)
+
+    color = _parse_color(config.color, gdk)
+    drawing_area = gtk.DrawingArea()
+    _disable_focus(drawing_area)
+    drawing_area.set_draw_func(_draw_outline(color, config.thickness))
+    window.set_child(drawing_area)
+
+
+def _add_blur_child(
+    window: Any,
+    gtk: Any,
+    _gdk: Any,
+    _config: LayerSurfaceConfig,
+) -> None:
+    drawing_area = gtk.DrawingArea()
+    _disable_focus(drawing_area)
+    window.set_child(drawing_area)
 
 
 def _is_wayland_session() -> bool:
