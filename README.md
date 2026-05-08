@@ -86,3 +86,13 @@ uv run ruff format --check .
 uv run pyright
 uv run pytest
 ```
+
+Build a single-file Python executable:
+
+```sh
+uv run pyinstaller layer-shell-py.spec
+```
+
+The executable is written to `dist/layer-shell-py`. It bundles the Python entry
+point and Python dependencies, but GTK, GObject introspection typelibs, Wayland,
+and `gtk4-layer-shell` remain native system dependencies.
