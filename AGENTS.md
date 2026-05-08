@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project Shape
-- Python 3.12 package managed by `uv`; lockfile is `uv.lock` and Pyright is configured to use `.venv`.
+- Python 3.14 package managed by `uv`; lockfile is `uv.lock` and Pyright is configured to use `.venv`.
 - CLI entrypoint is `layer-shell-py = layer_shell_py.main:main`; PyInstaller uses `scripts/pyinstaller_entry.py` instead.
 - Runtime code lives in `src/layer_shell_py/`; tests are lightweight CLI/config tests in `tests/` and intentionally avoid starting GTK.
 
@@ -22,6 +22,6 @@
 - The spec only adds `Gtk4LayerShell-1.0.typelib` when found under `/usr/lib/girepository-1.0/` or `/usr/lib64/girepository-1.0/`.
 
 ## Style And Tests
-- Ruff uses line length 88, double quotes, Python 3.12, and a broad lint set; do not assume default Ruff rules.
+- Ruff uses line length 88, double quotes, Python 3.14, and a broad lint set; do not assume default Ruff rules.
 - Pyright runs in `strict` mode over `src` and `tests`.
 - Prefer adding CLI/config tests that fail before GTK startup; tests should not require a Wayland compositor or native GTK layer-shell libraries.

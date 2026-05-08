@@ -3,7 +3,7 @@ name = "layer-shell-py"
 version = "0.1.0"
 description = "Wayland layer shell utility for colored outlines and fullscreen blur effects."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "pydantic>=2.11.0",
     "pygobject>=3.56.2",
@@ -27,7 +27,7 @@ build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py314"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
@@ -58,7 +58,7 @@ line-ending = "lf"
 
 [tool.pyright]
 include = ["src", "tests"]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"

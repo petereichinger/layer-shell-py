@@ -172,7 +172,7 @@ def _make_click_through(window: Any) -> None:
         surface = window.get_surface()
         if surface is not None:
             surface.set_input_region(cairo.Region())
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         # Keyboard focus is disabled above; an empty input region is best-effort
         # because the exact GDK surface API can vary by GTK binding version.
         return
