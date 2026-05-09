@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from .config import BlurConfig, Layer, OutlineConfig
 from .instance import InstanceAction, InstanceError, manage_instance
-from .layer_window import RuntimeDependencyError, run_blur, run_outline
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -61,6 +60,8 @@ def outline(
         typer.Option(help="Toggle this managed outline instance."),
     ] = False,
 ) -> None:
+    from .layer_window import RuntimeDependencyError, run_outline  # noqa: PLC0415
+
     try:
         action = _instance_action(start=start, stop=stop, toggle=toggle)
         config = OutlineConfig(
@@ -129,6 +130,8 @@ def blur(
         typer.Option(help="Toggle this managed blur instance."),
     ] = False,
 ) -> None:
+    from .layer_window import RuntimeDependencyError, run_blur  # noqa: PLC0415
+
     try:
         action = _instance_action(start=start, stop=stop, toggle=toggle)
         config = BlurConfig(
