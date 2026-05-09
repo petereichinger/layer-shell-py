@@ -8,6 +8,8 @@ compositors that support layer-shell.
 
 ## Requirements
 
+Python 3.14 or newer is required.
+
 On Arch Linux:
 
 ```sh
@@ -20,6 +22,25 @@ Verify the native layer-shell package and introspection bindings:
 pkg-config --modversion gtk-layer-shell-0
 python -c 'import gi; gi.require_version("Gtk4LayerShell", "1.0"); from gi.repository import Gtk4LayerShell; print(Gtk4LayerShell)'
 ```
+
+## Installation
+
+Install the native requirements first, then install the Python package from a
+GitHub Release wheel:
+
+```sh
+python -m pip install layer_shell_py-<version>-py3-none-any.whl
+```
+
+For isolated CLI installs, use `pipx` instead:
+
+```sh
+pipx install layer_shell_py-<version>-py3-none-any.whl
+```
+
+Release artifacts include a wheel and source distribution. They do not bundle
+GTK, GObject introspection, Wayland, or `gtk4-layer-shell`; those remain native
+system dependencies.
 
 ## Usage
 
@@ -101,12 +122,23 @@ uv run pyright
 uv run pytest
 ```
 
-Build a single-file Python executable:
+Build Python package distributions:
+
+```sh
+uv build
+```
+
+The wheel and source distribution are written to `dist/`.
+
+Build a PyInstaller onedir executable:
 
 ```sh
 uv run pyinstaller layer-shell-py.spec
 ```
 
-The executable is written to `dist/layer-shell-py`. It bundles the Python entry
-point and Python dependencies, but GTK, GObject introspection typelibs, Wayland,
-and `gtk4-layer-shell` remain native system dependencies.
+The executable directory is written to `dist/layer-shell-py`. It bundles the
+Python entry point and Python dependencies, but GTK, GObject introspection
+typelibs, Wayland, and `gtk4-layer-shell` remain native system dependencies.
+
+Version tags matching `v*` automatically build the wheel and source distribution
+and upload them to the corresponding GitHub Release.
