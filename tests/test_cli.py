@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 import pytest
 from typer.testing import CliRunner
 
@@ -14,6 +16,13 @@ def test_help_lists_outline_command() -> None:
     assert result.exit_code == 0
     assert "outline" in result.stdout
     assert "blur" in result.stdout
+
+
+def test_version_uses_package_metadata() -> None:
+    result = CliRunner().invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.stdout == f"layer-shell-py {version('layer-shell-py')}\n"
 
 
 def test_outline_help_lists_exclusive_zone_options() -> None:

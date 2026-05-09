@@ -1,3 +1,4 @@
+from importlib.metadata import version
 from typing import Annotated
 
 import typer
@@ -6,12 +7,23 @@ from pydantic import ValidationError
 from .config import BlurConfig, Layer, OutlineConfig
 from .instance import InstanceAction, InstanceError, manage_instance
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(no_args_is_help=True, invoke_without_command=True)
 
 
 @app.callback()
-def callback() -> None:
+def callback(
+    version_: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            help="Show the current version and exit.",
+        ),
+    ] = False,
+) -> None:
     """Wayland layer-shell utility."""
+    if version_:
+        typer.echo(f"layer-shell-py {version('layer-shell-py')}")
+        raise typer.Exit
 
 
 @app.command()
