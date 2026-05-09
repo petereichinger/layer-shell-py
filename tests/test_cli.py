@@ -32,8 +32,8 @@ def test_outline_help_lists_exclusive_zone_options() -> None:
     assert "ignore-exclusi" in result.stdout
     assert "respect-exclu" in result.stdout
     assert "--id" in result.stdout
-    assert "--start" in result.stdout
-    assert "--stop" in result.stdout
+    assert "--show" in result.stdout
+    assert "--hide" in result.stdout
     assert "--toggle" in result.stdout
     assert "--preload" in result.stdout
     assert "--quit" in result.stdout
@@ -60,8 +60,8 @@ def test_blur_help_lists_color_and_namespace_options() -> None:
     assert "color" in result.stdout
     assert "namespace" in result.stdout
     assert "--id" in result.stdout
-    assert "--start" in result.stdout
-    assert "--stop" in result.stdout
+    assert "--show" in result.stdout
+    assert "--hide" in result.stdout
     assert "--toggle" in result.stdout
     assert "--preload" in result.stdout
     assert "--quit" in result.stdout
@@ -82,20 +82,20 @@ def test_blur_rejects_unknown_layer_without_starting_gtk() -> None:
 
 
 def test_blur_rejects_multiple_lifecycle_actions_without_starting_gtk() -> None:
-    result = CliRunner().invoke(app, ["blur", "--start", "--stop"])
+    result = CliRunner().invoke(app, ["blur", "--show", "--hide"])
 
     assert result.exit_code != 0
     assert "Use only one" in result.output
 
 
 def test_outline_rejects_invalid_lifecycle_id_without_starting_gtk() -> None:
-    result = CliRunner().invoke(app, ["outline", "--id", "bad/id", "--stop"])
+    result = CliRunner().invoke(app, ["outline", "--id", "bad/id", "--hide"])
 
     assert result.exit_code != 0
     assert "Instance id" in result.output
 
 
-def test_blur_stop_routes_to_resident_lifecycle_without_starting_gtk(
+def test_blur_hide_routes_to_resident_lifecycle_without_starting_gtk(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[InstanceAction, str, str, list[str]]] = []
@@ -112,12 +112,12 @@ def test_blur_stop_routes_to_resident_lifecycle_without_starting_gtk(
 
     monkeypatch.setattr(main_module, "manage_instance", fake_manage_instance)
 
-    result = CliRunner().invoke(app, ["blur", "--id", "fuzzel", "--stop"])
+    result = CliRunner().invoke(app, ["blur", "--id", "fuzzel", "--hide"])
 
     assert result.exit_code == 0
     assert calls == [
         (
-            InstanceAction.STOP,
+            InstanceAction.HIDE,
             "blur",
             "fuzzel",
             [

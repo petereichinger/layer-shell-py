@@ -14,8 +14,8 @@ from time import monotonic, sleep
 
 class InstanceAction(StrEnum):
     PRELOAD = "preload"
-    START = "start"
-    STOP = "stop"
+    SHOW = "show"
+    HIDE = "hide"
     TOGGLE = "toggle"
     QUIT = "quit"
 
@@ -69,7 +69,7 @@ def manage_instance(
             command=None,
         )
 
-    if action is InstanceAction.START:
+    if action is InstanceAction.SHOW:
         return ensure_resident(
             instance,
             child_args,
@@ -85,7 +85,7 @@ def manage_instance(
             command="toggle",
         )
 
-    if action is InstanceAction.STOP:
+    if action is InstanceAction.HIDE:
         return send_command(instance, "hide", missing_ok=True)
 
     if action is InstanceAction.QUIT:

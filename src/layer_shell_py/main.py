@@ -57,15 +57,15 @@ def outline(
     ] = False,
     instance_id: Annotated[
         str,
-        typer.Option("--id", help="Managed instance id for start, stop, or toggle."),
+        typer.Option("--id", help="Managed instance id for show, hide, or toggle."),
     ] = "outline",
-    start: Annotated[
+    show: Annotated[
         bool,
-        typer.Option(help="Start this managed outline instance in the background."),
+        typer.Option(help="Show this managed outline instance."),
     ] = False,
-    stop: Annotated[
+    hide: Annotated[
         bool,
-        typer.Option(help="Stop this managed outline instance."),
+        typer.Option(help="Hide this managed outline instance."),
     ] = False,
     toggle: Annotated[
         bool,
@@ -104,8 +104,8 @@ def outline(
             allow_non_wayland=allow_non_wayland,
         )
         action = _instance_action(
-            start=start,
-            stop=stop,
+            show=show,
+            hide=hide,
             toggle=toggle,
             preload=preload,
             quit_=quit_,
@@ -163,15 +163,15 @@ def blur(
     ] = False,
     instance_id: Annotated[
         str,
-        typer.Option("--id", help="Managed instance id for start, stop, or toggle."),
+        typer.Option("--id", help="Managed instance id for show, hide, or toggle."),
     ] = "blur",
-    start: Annotated[
+    show: Annotated[
         bool,
-        typer.Option(help="Start this managed blur instance in the background."),
+        typer.Option(help="Show this managed blur instance."),
     ] = False,
-    stop: Annotated[
+    hide: Annotated[
         bool,
-        typer.Option(help="Stop this managed blur instance."),
+        typer.Option(help="Hide this managed blur instance."),
     ] = False,
     toggle: Annotated[
         bool,
@@ -209,8 +209,8 @@ def blur(
             allow_non_wayland=allow_non_wayland,
         )
         action = _instance_action(
-            start=start,
-            stop=stop,
+            show=show,
+            hide=hide,
             toggle=toggle,
             preload=preload,
             quit_=quit_,
@@ -247,8 +247,8 @@ def main() -> None:
 
 def _instance_action(
     *,
-    start: bool,
-    stop: bool,
+    show: bool,
+    hide: bool,
     toggle: bool,
     preload: bool,
     quit_: bool,
@@ -257,21 +257,21 @@ def _instance_action(
     if resident:
         return InstanceAction.PRELOAD
 
-    actions = [start, stop, toggle, preload, quit_]
+    actions = [show, hide, toggle, preload, quit_]
     if sum(actions) > 1:
-        msg = "Use only one of --preload, --start, --stop, --toggle, or --quit."
+        msg = "Use only one of --preload, --show, --hide, --toggle, or --quit."
         raise InstanceError(msg)
 
     if sum(actions) == 0:
-        msg = "Use one of --preload, --start, --stop, --toggle, or --quit."
+        msg = "Use one of --preload, --show, --hide, --toggle, or --quit."
         raise InstanceError(msg)
 
     if preload:
         return InstanceAction.PRELOAD
-    if start:
-        return InstanceAction.START
-    if stop:
-        return InstanceAction.STOP
+    if show:
+        return InstanceAction.SHOW
+    if hide:
+        return InstanceAction.HIDE
     if toggle:
         return InstanceAction.TOGGLE
     return InstanceAction.QUIT
