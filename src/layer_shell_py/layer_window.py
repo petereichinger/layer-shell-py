@@ -3,6 +3,9 @@ from collections.abc import Callable
 from ctypes.util import find_library
 from importlib import import_module
 from os import environ, execvpe
+from pathlib import Path
+from socket import AF_UNIX, SOCK_STREAM, socket
+from threading import Event, Thread
 from typing import Any, cast
 
 from .config import BlurConfig, Layer, LayerSurfaceConfig, OutlineConfig
@@ -12,17 +15,29 @@ class RuntimeDependencyError(RuntimeError):
     pass
 
 
-def run_outline(config: OutlineConfig) -> int:
-    return _run_layer_surface(config, _add_outline_child)
+def run_outline(
+    config: OutlineConfig,
+    *,
+    socket_path: str,
+    initial_visible: bool,
+) -> int:
+    return _run_layer_surface(config, _add_outline_child, socket_path, initial_visible)
 
 
-def run_blur(config: BlurConfig) -> int:
-    return _run_layer_surface(config, _add_blur_child)
+def run_blur(
+    config: BlurConfig,
+    *,
+    socket_path: str,
+    initial_visible: bool,
+) -> int:
+    return _run_layer_surface(config, _add_blur_child, socket_path, initial_visible)
 
 
-def _run_layer_surface(
+def _run_layer_surface(  # noqa: PLR0915
     config: LayerSurfaceConfig,
     add_child: Callable[[Any, Any, Any, LayerSurfaceConfig], None],
+    socket_path: str,
+    initial_visible: bool,
 ) -> int:
     if not config.allow_non_wayland and not _is_wayland_session():
         msg = "layer-shell-py must run under Wayland."
@@ -30,12 +45,17 @@ def _run_layer_surface(
 
     _ensure_layer_shell_preloaded()
 
-    gtk, gdk, layer_shell = _load_gtk_modules()
+    gtk, gdk, layer_shell, glib = _load_gtk_modules()
 
     application = gtk.Application(application_id="dev.peter.LayerShellPy")
+    server_stop = Event()
+    server_thread: Thread | None = None
 
     def activate(app: Any) -> None:
+        nonlocal server_thread
+
         window = gtk.ApplicationWindow(application=app)
+        visible = initial_visible
         window.set_title(config.namespace)
         window.set_decorated(False)
         _disable_focus(window)
@@ -57,10 +77,55 @@ def _run_layer_surface(
 
         add_child(window, gtk, gdk, config)
         window.connect("realize", _make_click_through)
-        window.present()
+
+        def show() -> bool:
+            nonlocal visible
+            visible = True
+            window.present()
+            return False
+
+        def hide() -> bool:
+            nonlocal visible
+            visible = False
+            window.hide()
+            return False
+
+        def toggle() -> bool:
+            if visible:
+                return hide()
+            return show()
+
+        def quit_app() -> bool:
+            server_stop.set()
+            app.quit()
+            return False
+
+        commands = {
+            "show": show,
+            "hide": hide,
+            "toggle": toggle,
+            "quit": quit_app,
+        }
+        server_thread = Thread(
+            target=_serve_commands,
+            args=(socket_path, server_stop, glib, commands),
+            daemon=True,
+        )
+        server_thread.start()
+
+        if initial_visible:
+            window.present()
+        else:
+            window.hide()
 
     application.connect("activate", activate)
-    return cast(int, application.run([]))
+    try:
+        return cast(int, application.run([]))
+    finally:
+        server_stop.set()
+        Path(socket_path).unlink(missing_ok=True)
+        if server_thread is not None:
+            server_thread.join(timeout=0.2)
 
 
 def _add_outline_child(
@@ -125,7 +190,7 @@ def _preload_reexec_argv() -> list[str]:
     return [sys.executable, *sys.argv]
 
 
-def _load_gtk_modules() -> tuple[Any, Any, Any]:
+def _load_gtk_modules() -> tuple[Any, Any, Any, Any]:
     try:
         import_module("cairo")
         gi = import_module("gi")
@@ -136,6 +201,7 @@ def _load_gtk_modules() -> tuple[Any, Any, Any]:
             import_module("gi.repository.Gtk"),
             import_module("gi.repository.Gdk"),
             import_module("gi.repository.Gtk4LayerShell"),
+            import_module("gi.repository.GLib"),
         )
     except (ImportError, ValueError, AttributeError) as exc:
         msg = (
@@ -187,6 +253,36 @@ def _make_click_through(window: Any) -> None:
         # Keyboard focus is disabled above; an empty input region is best-effort
         # because the exact GDK surface API can vary by GTK binding version.
         return
+
+
+def _serve_commands(
+    socket_path: str,
+    stop: Event,
+    glib: Any,
+    commands: dict[str, Callable[[], bool]],
+) -> None:
+    path = Path(socket_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.unlink(missing_ok=True)
+
+    with socket(AF_UNIX, SOCK_STREAM) as server:
+        server.bind(str(path))
+        server.listen(8)
+        server.settimeout(0.1)
+
+        while not stop.is_set():
+            try:
+                connection, _addr = server.accept()
+            except TimeoutError:
+                continue
+            except OSError:
+                return
+
+            with connection:
+                command = connection.recv(128).decode(errors="replace").strip()
+            callback = commands.get(command)
+            if callback is not None:
+                glib.idle_add(callback)
 
 
 def _parse_color(color: str, gdk: Any) -> Any:

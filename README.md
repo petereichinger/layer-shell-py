@@ -44,29 +44,29 @@ system dependencies.
 
 ## Usage
 
-Run a fullscreen red outline on the overlay layer:
+Preload a fullscreen red outline resident process on the overlay layer:
 
 ```sh
-layer-shell-py outline
+layer-shell-py outline --preload
 ```
 
 Customize the color and thickness:
 
 ```sh
-layer-shell-py outline --color '#ff00ff' --thickness 6
+layer-shell-py outline --preload --color '#ff00ff' --thickness 6
 ```
 
-Create a fullscreen blur target for niri 26.04 or newer:
+Preload a fullscreen blur target for niri 26.04 or newer:
 
 ```sh
-layer-shell-py blur
+layer-shell-py blur --preload
 ```
 
 The blur command draws a translucent fullscreen tint so niri has a visible
 surface to composite the background effect through. Adjust it with `--color`:
 
 ```sh
-layer-shell-py blur --color '#00000030'
+layer-shell-py blur --preload --color '#00000030'
 ```
 
 Then match its namespace in your niri config:
@@ -85,25 +85,29 @@ layer-rule {
 Both commands accept `--namespace` for compositor-specific matching:
 
 ```sh
-layer-shell-py blur --namespace lockscreen-blur
+layer-shell-py blur --preload --namespace lockscreen-blur
 ```
 
-The layer does not request mouse or keyboard input. In foreground mode, stop it
-with `Ctrl+C`, a process manager, or `kill`.
+The layer does not request mouse or keyboard input.
 
-For compositor commands and scripts, manage a named instance with `--id` plus
-`--start`, `--stop`, or `--toggle`:
+Instances are resident processes. Use `--preload` at login to start one hidden,
+then show or hide it instantly from compositor commands and scripts. `--stop`
+hides the layer but keeps the process warm; use `--quit` to terminate it.
 
 ```sh
-layer-shell-py blur --id fuzzel --toggle --namespace layer-shell-py-blur
+layer-shell-py blur --id fuzzel --preload --namespace layer-shell-py-blur
+layer-shell-py blur --id fuzzel --start
 layer-shell-py blur --id fuzzel --stop
+layer-shell-py blur --id fuzzel --quit
 
-layer-shell-py outline --id screenshare --start --color '#ff0000' --thickness 4
+layer-shell-py outline --id screenshare --preload --color '#ff0000' --thickness 4
+layer-shell-py outline --id screenshare --start
 layer-shell-py outline --id screenshare --stop
 ```
 
-Managed instances store PID files under `$XDG_RUNTIME_DIR/layer-shell-py/`, or
-`/tmp/layer-shell-py-$UID/` when `$XDG_RUNTIME_DIR` is unavailable.
+Managed instances store PID, socket, and log files under
+`$XDG_RUNTIME_DIR/layer-shell-py/`, or `/tmp/layer-shell-py-$UID/` when
+`$XDG_RUNTIME_DIR` is unavailable.
 
 ## Development
 

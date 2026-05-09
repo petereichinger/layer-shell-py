@@ -21,6 +21,7 @@ a = Analysis(
         "cairo",
         "gi",
         "gi.repository.Gdk",
+        "gi.repository.GLib",
         "gi.repository.Gtk",
     ],
     hookspath=[],

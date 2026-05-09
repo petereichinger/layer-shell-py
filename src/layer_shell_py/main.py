@@ -59,11 +59,30 @@ def outline(
         bool,
         typer.Option(help="Toggle this managed outline instance."),
     ] = False,
+    preload: Annotated[
+        bool,
+        typer.Option(help="Start this managed outline instance hidden."),
+    ] = False,
+    quit_: Annotated[
+        bool,
+        typer.Option("--quit", help="Quit this managed outline instance."),
+    ] = False,
+    resident: Annotated[
+        bool,
+        typer.Option("--resident", hidden=True),
+    ] = False,
+    socket_path: Annotated[
+        str | None,
+        typer.Option("--socket-path", hidden=True),
+    ] = None,
+    initial_visible: Annotated[
+        bool,
+        typer.Option("--initial-visible", hidden=True),
+    ] = False,
 ) -> None:
     from .layer_window import RuntimeDependencyError, run_outline  # noqa: PLC0415
 
     try:
-        action = _instance_action(start=start, stop=stop, toggle=toggle)
         config = OutlineConfig(
             color=color,
             thickness=thickness,
@@ -72,15 +91,32 @@ def outline(
             namespace=namespace,
             allow_non_wayland=allow_non_wayland,
         )
+        action = _instance_action(
+            start=start,
+            stop=stop,
+            toggle=toggle,
+            preload=preload,
+            quit_=quit_,
+            resident=resident,
+        )
+        if resident:
+            if socket_path is None:
+                msg = "Resident mode requires --socket-path."
+                raise InstanceError(msg)
+            raise typer.Exit(
+                run_outline(
+                    config,
+                    socket_path=socket_path,
+                    initial_visible=initial_visible,
+                )
+            )
         result = manage_instance(
             action=action,
             effect="outline",
             instance_id=instance_id,
             child_args=_outline_child_args(config),
         )
-        if result is not None:
-            raise typer.Exit(result)
-        raise typer.Exit(run_outline(config))
+        raise typer.Exit(result)
     except (InstanceError, ValidationError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     except RuntimeDependencyError as exc:
@@ -129,11 +165,30 @@ def blur(
         bool,
         typer.Option(help="Toggle this managed blur instance."),
     ] = False,
+    preload: Annotated[
+        bool,
+        typer.Option(help="Start this managed blur instance hidden."),
+    ] = False,
+    quit_: Annotated[
+        bool,
+        typer.Option("--quit", help="Quit this managed blur instance."),
+    ] = False,
+    resident: Annotated[
+        bool,
+        typer.Option("--resident", hidden=True),
+    ] = False,
+    socket_path: Annotated[
+        str | None,
+        typer.Option("--socket-path", hidden=True),
+    ] = None,
+    initial_visible: Annotated[
+        bool,
+        typer.Option("--initial-visible", hidden=True),
+    ] = False,
 ) -> None:
     from .layer_window import RuntimeDependencyError, run_blur  # noqa: PLC0415
 
     try:
-        action = _instance_action(start=start, stop=stop, toggle=toggle)
         config = BlurConfig(
             color=color,
             ignore_exclusive_zones=ignore_exclusive_zones,
@@ -141,15 +196,32 @@ def blur(
             namespace=namespace,
             allow_non_wayland=allow_non_wayland,
         )
+        action = _instance_action(
+            start=start,
+            stop=stop,
+            toggle=toggle,
+            preload=preload,
+            quit_=quit_,
+            resident=resident,
+        )
+        if resident:
+            if socket_path is None:
+                msg = "Resident mode requires --socket-path."
+                raise InstanceError(msg)
+            raise typer.Exit(
+                run_blur(
+                    config,
+                    socket_path=socket_path,
+                    initial_visible=initial_visible,
+                )
+            )
         result = manage_instance(
             action=action,
             effect="blur",
             instance_id=instance_id,
             child_args=_blur_child_args(config),
         )
-        if result is not None:
-            raise typer.Exit(result)
-        raise typer.Exit(run_blur(config))
+        raise typer.Exit(result)
     except (InstanceError, ValidationError) as exc:
         raise typer.BadParameter(str(exc)) from exc
     except RuntimeDependencyError as exc:
@@ -161,19 +233,36 @@ def main() -> None:
     app()
 
 
-def _instance_action(*, start: bool, stop: bool, toggle: bool) -> InstanceAction:
-    actions = [start, stop, toggle]
+def _instance_action(
+    *,
+    start: bool,
+    stop: bool,
+    toggle: bool,
+    preload: bool,
+    quit_: bool,
+    resident: bool,
+) -> InstanceAction:
+    if resident:
+        return InstanceAction.PRELOAD
+
+    actions = [start, stop, toggle, preload, quit_]
     if sum(actions) > 1:
-        msg = "Use only one of --start, --stop, or --toggle."
+        msg = "Use only one of --preload, --start, --stop, --toggle, or --quit."
         raise InstanceError(msg)
 
+    if sum(actions) == 0:
+        msg = "Use one of --preload, --start, --stop, --toggle, or --quit."
+        raise InstanceError(msg)
+
+    if preload:
+        return InstanceAction.PRELOAD
     if start:
         return InstanceAction.START
     if stop:
         return InstanceAction.STOP
     if toggle:
         return InstanceAction.TOGGLE
-    return InstanceAction.FOREGROUND
+    return InstanceAction.QUIT
 
 
 def _outline_child_args(config: OutlineConfig) -> list[str]:
