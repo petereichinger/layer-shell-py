@@ -1,3 +1,12 @@
+# Rust
+/target/
+
+# Editor/OS noise
+.DS_Store
+*.swp
+*.swo
+
+# Legacy Python artifacts
 .venv/
 __pycache__/
 *.py[cod]

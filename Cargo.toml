@@ -1,0 +1,16 @@
+[package]
+name = "layer-shell-rs"
+version = "0.1.0"
+edition = "2024"
+description = "Wayland layer-shell utility for outlines and blur targets."
+license = "MIT"
+
+[[bin]]
+name = "layer-shell-rs"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+gtk4 = { version = "0.10", features = ["v4_12"] }
+gtk4-layer-shell = "0.7.1"
+libc = "0.2"
