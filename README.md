@@ -87,8 +87,10 @@ layer-shell-rs blur --preload --namespace lockscreen-blur
 ```
 
 Both commands also accept `--layer` with `background`, `bottom`, `top`, or
-`overlay`; `overlay` is the default. By default, surfaces ignore exclusive zones
-reserved by bars and panels. Use `--respect-exclusive-zones` to respect them, or
+`overlay`; `overlay` is the default for new instances. Passing `--layer` with
+`--preload`, `--show`, or `--toggle` also updates an already-running resident
+instance. By default, surfaces ignore exclusive zones reserved by bars and panels.
+Use `--respect-exclusive-zones` to respect them, or
 `--ignore-exclusive-zones` to set the default explicitly.
 
 Use `--allow-non-wayland` only for development. It skips the Wayland session

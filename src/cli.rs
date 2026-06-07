@@ -78,8 +78,12 @@ struct SurfaceArgs {
     )]
     respect_exclusive_zones: bool,
 
-    #[arg(long, value_enum, default_value_t = Layer::Overlay, help = "Wayland layer-shell layer.")]
-    layer: Layer,
+    #[arg(
+        long,
+        value_enum,
+        help = "Wayland layer-shell layer. Defaults to overlay for new instances."
+    )]
+    layer: Option<Layer>,
 
     #[arg(
         long,
@@ -106,8 +110,12 @@ struct BlurSurfaceArgs {
     )]
     respect_exclusive_zones: bool,
 
-    #[arg(long, value_enum, default_value_t = Layer::Overlay, help = "Wayland layer-shell layer.")]
-    layer: Layer,
+    #[arg(
+        long,
+        value_enum,
+        help = "Wayland layer-shell layer. Defaults to overlay for new instances."
+    )]
+    layer: Option<Layer>,
 
     #[arg(
         long,
@@ -160,6 +168,10 @@ impl SurfaceArgs {
             self.allow_non_wayland,
         )
     }
+
+    fn runtime_options(&self) -> Option<String> {
+        runtime_options(self.layer)
+    }
 }
 
 impl BlurSurfaceArgs {
@@ -172,6 +184,10 @@ impl BlurSurfaceArgs {
             self.allow_non_wayland,
         )
     }
+
+    fn runtime_options(&self) -> Option<String> {
+        runtime_options(self.layer)
+    }
 }
 
 pub fn run(cli: Cli) -> Result<i32, CliError> {
@@ -182,6 +198,7 @@ pub fn run(cli: Cli) -> Result<i32, CliError> {
 }
 
 fn run_outline_command(args: OutlineArgs) -> Result<i32, CliError> {
+    let runtime_options = args.surface.runtime_options();
     let config = OutlineConfig::new(args.surface.config()?, args.color, args.thickness)?;
     let action = instance_action(&args.instance)?;
 
@@ -196,11 +213,18 @@ fn run_outline_command(args: OutlineArgs) -> Result<i32, CliError> {
     }
 
     let instance_id = args.instance.instance_id.as_deref().unwrap_or("outline");
-    manage_instance(action, "outline", instance_id, &outline_child_args(&config))
-        .map_err(CliError::Instance)
+    manage_instance(
+        action,
+        "outline",
+        instance_id,
+        &outline_child_args(&config),
+        runtime_options.as_deref(),
+    )
+    .map_err(CliError::Instance)
 }
 
 fn run_blur_command(args: BlurArgs) -> Result<i32, CliError> {
+    let runtime_options = args.surface.runtime_options();
     let config = BlurConfig::new(args.surface.config()?, args.color)?;
     let action = instance_action(&args.instance)?;
 
@@ -215,14 +239,20 @@ fn run_blur_command(args: BlurArgs) -> Result<i32, CliError> {
     }
 
     let instance_id = args.instance.instance_id.as_deref().unwrap_or("blur");
-    manage_instance(action, "blur", instance_id, &blur_child_args(&config))
-        .map_err(CliError::Instance)
+    manage_instance(
+        action,
+        "blur",
+        instance_id,
+        &blur_child_args(&config),
+        runtime_options.as_deref(),
+    )
+    .map_err(CliError::Instance)
 }
 
 fn surface_config(
     ignore_exclusive_zones: bool,
     respect_exclusive_zones: bool,
-    layer: Layer,
+    layer: Option<Layer>,
     namespace: &str,
     allow_non_wayland: bool,
 ) -> Result<LayerSurfaceConfig, CliError> {
@@ -232,7 +262,7 @@ fn surface_config(
 
     LayerSurfaceConfig::new(
         !respect_exclusive_zones,
-        layer,
+        layer.unwrap_or(Layer::Overlay),
         namespace.to_string(),
         allow_non_wayland,
     )
@@ -317,6 +347,10 @@ fn exclusive_zone_arg(ignore_exclusive_zones: bool) -> &'static str {
     }
 }
 
+fn runtime_options(layer: Option<Layer>) -> Option<String> {
+    layer.map(|layer| format!("layer={layer}"))
+}
+
 #[derive(Debug)]
 pub enum CliError {
     Config(crate::config::ConfigError),
@@ -390,5 +424,21 @@ mod tests {
     #[test]
     fn unknown_layer_is_rejected_by_clap() {
         assert!(Cli::try_parse_from(["layer-shell-rs", "blur", "--layer", "dock"]).is_err());
+    }
+
+    #[test]
+    fn omitted_layer_defaults_to_overlay_for_new_instances() {
+        let config = surface_config(false, false, None, "test", false).unwrap();
+
+        assert_eq!(config.layer, Layer::Overlay);
+    }
+
+    #[test]
+    fn runtime_options_only_include_explicit_layer() {
+        assert_eq!(runtime_options(None), None);
+        assert_eq!(
+            runtime_options(Some(Layer::Bottom)),
+            Some("layer=bottom".into())
+        );
     }
 }

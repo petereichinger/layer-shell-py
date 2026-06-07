@@ -62,16 +62,34 @@ pub fn manage_instance(
     effect: &str,
     instance_id: &str,
     child_args: &[String],
+    runtime_options: Option<&str>,
 ) -> Result<i32, InstanceError> {
     validate_instance_id(instance_id)?;
     let instance = Instance::new(effect, instance_id);
 
     match action {
-        InstanceAction::Preload => ensure_resident(&instance, child_args, false, None),
-        InstanceAction::Show => ensure_resident(&instance, child_args, true, Some("show")),
-        InstanceAction::Toggle => ensure_resident(&instance, child_args, true, Some("toggle")),
+        InstanceAction::Preload => {
+            let command =
+                runtime_options.map(|options| command_with_options("configure", Some(options)));
+            ensure_resident(&instance, child_args, false, command.as_deref())
+        }
+        InstanceAction::Show => {
+            let command = command_with_options("show", runtime_options);
+            ensure_resident(&instance, child_args, true, Some(&command))
+        }
+        InstanceAction::Toggle => {
+            let command = command_with_options("toggle", runtime_options);
+            ensure_resident(&instance, child_args, true, Some(&command))
+        }
         InstanceAction::Hide => send_command(&instance, "hide", true),
         InstanceAction::Quit => quit_instance(&instance),
+    }
+}
+
+fn command_with_options(command: &str, runtime_options: Option<&str>) -> String {
+    match runtime_options {
+        Some(options) if !options.is_empty() => format!("{command} {options}"),
+        _ => command.to_string(),
     }
 }
 

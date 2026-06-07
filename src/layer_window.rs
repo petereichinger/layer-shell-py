@@ -18,9 +18,10 @@ use std::time::Duration;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeCommand {
-    Show,
+    Show { layer: Option<Layer> },
     Hide,
-    Toggle,
+    Toggle { layer: Option<Layer> },
+    Configure { layer: Layer },
     Quit,
 }
 
@@ -139,7 +140,8 @@ where
                 move || {
                     while let Ok(command) = receiver.try_recv() {
                         match command {
-                            RuntimeCommand::Show => {
+                            RuntimeCommand::Show { layer } => {
+                                apply_runtime_layer(&window, layer);
                                 visible.set(true);
                                 window.present();
                             }
@@ -147,7 +149,8 @@ where
                                 visible.set(false);
                                 window.set_visible(false);
                             }
-                            RuntimeCommand::Toggle => {
+                            RuntimeCommand::Toggle { layer } => {
+                                apply_runtime_layer(&window, layer);
                                 if visible.get() {
                                     visible.set(false);
                                     window.set_visible(false);
@@ -155,6 +158,9 @@ where
                                     visible.set(true);
                                     window.present();
                                 }
+                            }
+                            RuntimeCommand::Configure { layer } => {
+                                apply_runtime_layer(&window, Some(layer));
                             }
                             RuntimeCommand::Quit => {
                                 server_stop.store(true, Ordering::Relaxed);
@@ -256,6 +262,12 @@ fn to_gtk_layer(layer: Layer) -> gtk4_layer_shell::Layer {
     }
 }
 
+fn apply_runtime_layer(window: &gtk::ApplicationWindow, layer: Option<Layer>) {
+    if let Some(layer) = layer {
+        window.set_layer(to_gtk_layer(layer));
+    }
+}
+
 fn disable_focus(widget: &impl IsA<gtk::Widget>) {
     widget.set_can_focus(false);
     widget.set_focusable(false);
@@ -338,11 +350,34 @@ fn serve_commands(path: &Path, stop: &AtomicBool, sender: Sender<RuntimeCommand>
 }
 
 fn parse_command(command: &str) -> Option<RuntimeCommand> {
-    match command {
-        "show" => Some(RuntimeCommand::Show),
-        "hide" => Some(RuntimeCommand::Hide),
-        "toggle" => Some(RuntimeCommand::Toggle),
-        "quit" => Some(RuntimeCommand::Quit),
+    let mut parts = command.split_whitespace();
+    let action = parts.next()?;
+    let mut layer = None;
+
+    for part in parts {
+        let value = part.strip_prefix("layer=")?;
+        if layer.is_some() {
+            return None;
+        }
+        layer = Some(parse_layer(value)?);
+    }
+
+    match action {
+        "show" => Some(RuntimeCommand::Show { layer }),
+        "hide" if layer.is_none() => Some(RuntimeCommand::Hide),
+        "toggle" => Some(RuntimeCommand::Toggle { layer }),
+        "configure" => Some(RuntimeCommand::Configure { layer: layer? }),
+        "quit" if layer.is_none() => Some(RuntimeCommand::Quit),
+        _ => None,
+    }
+}
+
+fn parse_layer(layer: &str) -> Option<Layer> {
+    match layer {
+        "background" => Some(Layer::Background),
+        "bottom" => Some(Layer::Bottom),
+        "top" => Some(Layer::Top),
+        "overlay" => Some(Layer::Overlay),
         _ => None,
     }
 }
@@ -353,12 +388,40 @@ mod tests {
 
     #[test]
     fn command_parser_accepts_known_commands() {
-        assert_eq!(parse_command("show"), Some(RuntimeCommand::Show));
+        assert_eq!(
+            parse_command("show"),
+            Some(RuntimeCommand::Show { layer: None })
+        );
         assert_eq!(parse_command("quit"), Some(RuntimeCommand::Quit));
+    }
+
+    #[test]
+    fn command_parser_accepts_runtime_layer_changes() {
+        assert_eq!(
+            parse_command("show layer=bottom"),
+            Some(RuntimeCommand::Show {
+                layer: Some(Layer::Bottom)
+            })
+        );
+        assert_eq!(
+            parse_command("toggle layer=top"),
+            Some(RuntimeCommand::Toggle {
+                layer: Some(Layer::Top)
+            })
+        );
+        assert_eq!(
+            parse_command("configure layer=background"),
+            Some(RuntimeCommand::Configure {
+                layer: Layer::Background
+            })
+        );
     }
 
     #[test]
     fn command_parser_rejects_unknown_commands() {
         assert_eq!(parse_command("noop"), None);
+        assert_eq!(parse_command("show layer=dock"), None);
+        assert_eq!(parse_command("hide layer=bottom"), None);
+        assert_eq!(parse_command("configure"), None);
     }
 }
